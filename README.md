@@ -9,7 +9,7 @@ It provides a strongly-typed, extensible API to communicate with virtual machine
 ## 🚀 Features
 
 - 📡 Communicates with QEMU Guest Agent over Unix sockets
-- 🔒 Strongly-typed QMP commands with Go generics
+- 🔒 Auto-generated strongly-typed QMP commands 
 - 🔁 JSON (un)marshalling of requests and responses
 - 🧪 Built-in test server for command validation
 - 🛠️ Designed for extensibility and code generation
@@ -34,29 +34,41 @@ import (
     "github.com/prevostcorentin/go-qga/internal/qmp"
 )
 
-type HostnameArgs struct{}
+type HostnameCommand struct{}
+
+func (c *HostnameCommand) Execute() string {
+    return "guest-get-host-name"
+}
+
+func (c *HostnameCommand) Arguments() any {
+    return nil // No arguments for this command
+}
+
+func (c *HostnameCommand) Response() any {
+    return &HostnameResponse{}
+}
 
 type HostnameResponse struct {
-    Name string `json:"name"`
+    Name string `json:"host-name"`
 }
 
 func main() {
-    socket := qmp.Socket{}
+    socket := qmp.NewSocket()
     if err := socket.Connect("/path/to/qga.sock"); err != nil {
         log.Fatal(err)
     }
     defer socket.Close()
 
-    cmd := qmp.Command[HostnameArgs, HostnameResponse]{
-        Execute: "guest-get-host-name",
-    }
+    executor := qmp.NewCommandExecutor(&socket)
+    command := &HostnameCommand{}
 
-    resp, err := cmd.Run(&socket)
+    result, err := executor.Run(command)
     if err != nil {
         log.Fatal(err)
     }
 
-    fmt.Println("VM hostname:", resp.Name)
+    response := result.(*HostnameResponse)
+    fmt.Println("VM hostname:", response.Name)
 }
 ```
 

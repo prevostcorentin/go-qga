@@ -2,8 +2,6 @@ package qmp
 
 import (
 	"bufio"
-	"encoding/json"
-	"fmt"
 	"net"
 )
 
@@ -29,13 +27,9 @@ func (socket *Socket) consumeBanner() error {
 	return err
 }
 
-func (socket *Socket) send(object interface{}) ([]byte, error) {
-	jsonQuery, err := json.Marshal(object)
-	if err != nil {
+func (socket *Socket) send(bytes []byte) ([]byte, error) {
+	if _, err := socket.pipe.Write(bytes); err != nil {
 		return nil, err
-	}
-	if _, err = fmt.Fprintf(socket.pipe.Writer, "%s\n", jsonQuery); err != nil {
-		return make([]byte, 0, 0), err
 	}
 	socket.pipe.Flush()
 	bytes, err := socket.pipe.ReadBytes(0x0A)
