@@ -30,17 +30,34 @@ func TestHostnameCommand(t *testing.T) {
 	}
 	defer qgaSocket.Close()
 
-	command := qmp.Command[GuestHostNameArguments, GuestHostNameResponse]{
-		Execute: "guest-get-host-name",
-	}
-	var response *GuestHostNameResponse
-	response, err := command.Run(&qgaSocket)
+	command := hostNameCommand{}
+	executor := qmp.NewExecutor(&qgaSocket)
+	response, err := executor.Run(command)
 	if err != nil {
 		t.Fatalf("while running command: %v", err)
 	}
-	if response.Return.Name != "fake-vm" {
-		t.Errorf(`vm name differs (got "%s", expecting "fake-vm")`, response.Return.Name)
+	typedResponse := response.(*hostNameResponse)
+	if typedResponse.Name != "fake-vm" {
+		t.Errorf(`vm name differs (got "%s", expecting "fake-vm")`, typedResponse.Name)
 	}
+}
+
+type hostNameCommand struct{}
+
+func (command hostNameCommand) Execute() string {
+	return "guest-get-host-name"
+}
+
+func (command hostNameCommand) Arguments() any {
+	return nil
+}
+
+func (command hostNameCommand) Response() any {
+	return &hostNameResponse{}
+}
+
+type hostNameResponse struct {
+	Name string
 }
 
 func RunFakeQmpGuestAgent(t *testing.T, socketPath string) {
@@ -81,7 +98,7 @@ func handleConnection(t *testing.T, connection net.Conn) {
 	if err := json.Unmarshal(line, &command); err != nil {
 		t.Fatalf("unmarshalling command: %v", err)
 	}
-	var response interface{}
+	var response any
 	if command.Execute == "guest-get-host-name" {
 		qmpResponse := &QmpHostnameResponse{}
 		qmpResponse.Return.Name = "fake-vm"
@@ -108,7 +125,7 @@ type QmpBannerResponse struct {
 			} `json:"qemu"`
 			Package string `json:"package"`
 		} `json:"version"`
-		Capabilities []interface{} `json:"capabilities"`
+		Capabilities []any `json:"capabilities"`
 	} `json:"QMP"`
 }
 
