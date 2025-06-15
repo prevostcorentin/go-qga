@@ -1,6 +1,10 @@
 ![Tests](https://github.com/prevostcorentin/go-qga/actions/workflows/test.yml/badge.svg)
 ![Lint](https://github.com/prevostcorentin/go-qga/actions/workflows/lint.yml/badge.svg)
 [![codecov](https://codecov.io/gh/prevostcorentin/go-qga/branch/main/graph/badge.svg?token=ZGKL57SARB)](https://codecov.io/gh/prevostcorentin/go-qga)
+[![Go Report Card](https://goreportcard.com/badge/github.com/prevostcorentin/go-qga)](https://goreportcard.com/report/github.com/prevostcorentin/go-qga)
+[![License](https://img.shields.io/github/license/prevostcorentin/go-qga)](./LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/prevostcorentin/go-qga.svg)](https://pkg.go.dev/github.com/prevostcorentin/go-qga)
+[![Last Commit](https://img.shields.io/github/last-commit/prevostcorentin/go-qga)](https://github.com/prevostcorentin/go-qga)
 
 
 # go-qga
