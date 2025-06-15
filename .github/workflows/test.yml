@@ -27,7 +27,4 @@ jobs:
       with:
         file: coverage.filtered.out
         fail_ci_if_error: true
-<<<<<<< HEAD
         token: ${{ secrets.CODECOV_TOKEN }}
-=======
->>>>>>> eb43e2b (code coverage + linting)
