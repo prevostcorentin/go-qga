@@ -1,3 +1,5 @@
+![Go CI](https://github.com/prevostcorentin/go-qga/actions/workflows/ci.yml/badge.svg)
+
 # go-qga
 
 **go-qga** is a Go library to interact with the **QEMU Guest Agent** using the **QEMU Machine Protocol (QMP)**.
