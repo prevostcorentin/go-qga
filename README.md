@@ -1,6 +1,5 @@
 ![Tests](https://github.com/prevostcorentin/go-qga/actions/workflows/test.yml/badge.svg)
 ![Lint](https://github.com/prevostcorentin/go-qga/actions/workflows/lint.yml/badge.svg)
-
 [![codecov](https://codecov.io/gh/prevostcorentin/go-qga/branch/main/graph/badge.svg)](https://codecov.io/gh/prevostcorentin/go-qga)
 
 # go-qga
