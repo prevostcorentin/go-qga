@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install addlicense
         run: |
-          go install github.com/google/addlicense@test
+          go install github.com/google/addlicense@latest
           echo "$HOME/go/bin" >> $GITHUB_PATH
 
       - name: "Check license headers"
