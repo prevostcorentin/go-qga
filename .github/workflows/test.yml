@@ -18,7 +18,9 @@ jobs:
         go-version: '1.24.4'
 
     - name: Run tests
-      run: go test -v -coverprofile=coverage.out ./...
+      run: |
+        go test -v -coverprofile=coverage.out ./...
+        grep -v "_test.go" coverage.out > coverage.filtered.out
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
