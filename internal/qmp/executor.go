@@ -20,10 +20,10 @@ import (
 )
 
 type commandExecutor struct {
-	socket *Socket
+	socket Socket
 }
 
-func NewExecutor(socket *Socket) *commandExecutor {
+func NewExecutor(socket Socket) *commandExecutor {
 	return &commandExecutor{socket: socket}
 }
 
@@ -40,7 +40,7 @@ func (executor *commandExecutor) Run(command Command) (any, error) {
 		return nil, err
 	}
 	marshalledBytes = append(marshalledBytes, 0x0A) // Marshalling does not suffix objects with a line feed
-	responseBytes, err := executor.socket.send(marshalledBytes)
+	responseBytes, err := executor.socket.Send(marshalledBytes)
 	if err != nil {
 		return nil, err
 	}
