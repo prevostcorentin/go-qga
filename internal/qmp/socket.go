@@ -19,90 +19,61 @@ import (
 	"fmt"
 	"os"
 
+	. "github.com/prevostcorentin/go-qga/internal/errors"
 	"github.com/prevostcorentin/go-qga/internal/qmp/transport"
 )
 
 type Socket interface {
-	Connect(path string) error
-	Send(bytes []byte) ([]byte, error)
+	Connect(path string) *SocketError
+	Send(bytes []byte) ([]byte, *SocketError)
 	Close() error
 }
-
-type SocketError struct {
-	WrappedError error
-	errType      SocketErrorType
-}
-
-func (err *SocketError) Domain() string {
-	return "Socket"
-}
-
-func (err *SocketError) Kind() string {
-	return string(err.errType)
-}
-
-func (err *SocketError) Unwrap() error {
-	return err.WrappedError
-}
-
-func (err *SocketError) Error() string {
-	message := fmt.Sprintf("Error: %s => %v", err.Domain(), err.WrappedError)
-	return message
-}
-
-type SocketErrorType string
-
-const (
-	ConnectErrorType SocketErrorType = "Connect"
-	SendErrorType                    = "Send"
-	ReadErrorType                    = "Read"
-	CloseErrorType                   = "Close"
-)
 
 type socket struct {
 	transport transport.Transport
 }
 
-func Open(path string, transport transport.Transport) (Socket, error) {
+func Open(path string, transport transport.Transport) (Socket, *SocketError) {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		return nil, fmt.Errorf(`socket "%s" does not exist`, path)
+		errorReason := fmt.Errorf(`socket "%s" does not exist`, path)
+		return nil, NewSocketError(errorReason, ConnectErrorType)
 	}
 	if err := transport.Connect(); err != nil {
-		return nil, &SocketError{WrappedError: err, errType: ConnectErrorType}
+		return nil, NewSocketError(err, ConnectErrorType)
 	}
 	socket := socket{transport: transport}
 	if err := socket.Connect(path); err != nil {
-		return nil, &SocketError{WrappedError: err, errType: ConnectErrorType}
+		return nil, NewSocketError(err, ConnectErrorType)
 	}
 	return &socket, nil
 }
 
-func (socket *socket) Connect(path string) error {
+func (socket *socket) Connect(path string) *SocketError {
 	return socket.consumeBanner()
 }
 
-func (socket *socket) consumeBanner() error {
+func (socket *socket) consumeBanner() *SocketError {
 	// TODO: Use the banner to gather agent capabilities (could result in client code generation ?)
 	if _, err := socket.transport.Read(); err != nil {
-		return &SocketError{WrappedError: err, errType: ReadErrorType}
+		return NewSocketError(err, ReadErrorType)
 	}
 	return nil
 }
 
-func (socket *socket) Send(bytes []byte) ([]byte, error) {
+func (socket *socket) Send(bytes []byte) ([]byte, *SocketError) {
 	if err := socket.transport.Write(bytes); err != nil {
-		return nil, &SocketError{WrappedError: err, errType: SendErrorType}
+		return nil, NewSocketError(err, SendErrorType)
 	}
 	bytes, err := socket.transport.Read()
 	if err != nil {
-		return bytes, &SocketError{WrappedError: err, errType: SendErrorType}
+		return bytes, NewSocketError(err, SendErrorType)
 	}
 	return bytes, nil
 }
 
 func (socket *socket) Close() error {
 	if err := socket.transport.Close(); err != nil {
-		return &SocketError{WrappedError: err, errType: CloseErrorType}
+		return NewSocketError(err, CloseErrorType)
 	}
 	return nil
 }

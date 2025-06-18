@@ -44,9 +44,9 @@ func TestHostnameCommand(t *testing.T) {
 	socketPath := buildSocketPath()
 	RunFakeQmpGuestAgent(t, socketPath)
 	transport := transport.NewTransport(transport.Unix, socketPath)
-	qgaSocket, err := qmp.Open(socketPath, transport)
-	if err != nil {
-		t.Fatalf("while opening socket: %v", err)
+	qgaSocket, openErr := qmp.Open(socketPath, transport)
+	if openErr != nil {
+		t.Fatalf("while opening socket: %v", openErr)
 	}
 	defer qgaSocket.Close()
 
