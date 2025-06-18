@@ -22,11 +22,12 @@ import (
 
 	. "github.com/prevostcorentin/go-qga/internal/errors"
 	"github.com/prevostcorentin/go-qga/internal/qmp"
+	. "github.com/prevostcorentin/go-qga/internal/testing"
 )
 
 type fakeTransport struct{}
 
-func (_ *fakeTransport) Connect() error {
+func (_ *fakeTransport) Connect() *TransportError {
 	return nil
 }
 
@@ -54,7 +55,7 @@ func TestOpenUnexistingSocket(t *testing.T) {
 
 type noWriteTransport struct{}
 
-func (_ *noWriteTransport) Connect() error {
+func (_ *noWriteTransport) Connect() *TransportError {
 	return nil
 }
 
@@ -75,11 +76,12 @@ func (_ *noWriteTransport) Write(bytes []byte) error {
 }
 
 func TestSendWriteMalfunction(t *testing.T) {
-	socketPath, transport := buildSocketPath(), noWriteTransport{}
+	CleanTestFolder()
+	socketPath, transport := BuildSocketPath(), noWriteTransport{}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
-		t.Fatalf("couldn't open socket pipe %s", socketPath)
+		t.Fatalf("couldn't open socket pipe %s: %v", socketPath, listenErr)
 	}
 	defer listener.Close()
 	defer os.Remove(socketPath)
@@ -91,17 +93,17 @@ func TestSendWriteMalfunction(t *testing.T) {
 	if err == nil {
 		t.Error("there should have been an error here")
 	}
-	if err.Domain() != SocketDomain {
+	if err.Domain() != QmpConnectionDomain {
 		t.Errorf(`wrong error domain "%s". should have been "Socket"`, err.Domain())
 	}
-	if err.Kind() != SendErrorType {
+	if err.Kind() != SendErrorKind {
 		t.Errorf(`wrong error kind "%s". should have been "Send"`, err.Kind())
 	}
 }
 
 type noBannerTransport struct{}
 
-func (_ *noBannerTransport) Connect() error {
+func (_ *noBannerTransport) Connect() *TransportError {
 	return nil
 }
 
@@ -122,11 +124,12 @@ func (_ *noBannerTransport) Write(bytes []byte) error {
 }
 
 func TestMalfunctioningConnect(t *testing.T) {
-	socketPath, transport := buildSocketPath(), noBannerTransport{}
+	CleanTestFolder()
+	socketPath, transport := BuildSocketPath(), noBannerTransport{}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
-		t.Fatalf("couldn't open socket pipe %s", socketPath)
+		t.Fatalf("couldn't open socket pipe %s: %v", socketPath, listenErr)
 	}
 	defer listener.Close()
 	defer os.Remove(socketPath)
@@ -134,11 +137,11 @@ func TestMalfunctioningConnect(t *testing.T) {
 	if err == nil {
 		t.Fatal("the socket should not open here")
 	}
-	if err.Domain() != SocketDomain {
-		t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), SocketDomain)
+	if err.Domain() != QmpConnectionDomain {
+		t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 	}
-	if err.Kind() != ConnectErrorType {
-		t.Errorf(`wrong error kind "%v". expected "%s"`, err.Domain(), SocketDomain)
+	if err.Kind() != ConnectErrorKind {
+		t.Errorf(`wrong error kind "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 	}
 }
 
@@ -146,7 +149,7 @@ type noReadTransport struct {
 	bannerRead bool
 }
 
-func (_ *noReadTransport) Connect() error {
+func (_ *noReadTransport) Connect() *TransportError {
 	return nil
 }
 
@@ -171,11 +174,12 @@ func (_ *noReadTransport) Write(bytes []byte) error {
 }
 
 func TestSendReadMalfunction(t *testing.T) {
-	socketPath, transport := buildSocketPath(), noReadTransport{bannerRead: false}
+	CleanTestFolder()
+	socketPath, transport := BuildSocketPath(), noReadTransport{bannerRead: false}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
-		t.Fatalf("couldn't open socket pipe %s", socketPath)
+		t.Fatalf("couldn't open socket pipe %s: %v", socketPath, listenErr)
 	}
 	defer listener.Close()
 	defer os.Remove(socketPath)
@@ -187,18 +191,18 @@ func TestSendReadMalfunction(t *testing.T) {
 	if err == nil {
 		t.Error("there should have been an error here")
 	}
-	if err.Domain() != SocketDomain {
-		t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), SocketDomain)
+	if err.Domain() != QmpConnectionDomain {
+		t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 	}
-	if err.Kind() != SendErrorType {
-		t.Errorf(`wrong error type "%v". expected "%s"`, err.Domain(), SendErrorType)
+	if err.Kind() != SendErrorKind {
+		t.Errorf(`wrong error type "%v". expected "%s"`, err.Domain(), SendErrorKind)
 	}
 }
 
 type noConnectTransport struct{}
 
-func (_ *noConnectTransport) Connect() error {
-	return errors.New("i am malfunctioning")
+func (_ *noConnectTransport) Connect() *TransportError {
+	return NewTransportError(errors.New("i am malfunctioning"), Connect)
 }
 
 func (_ *noConnectTransport) Close() error {
@@ -218,20 +222,21 @@ func (_ *noConnectTransport) Write(bytes []byte) error {
 }
 
 func TestConnectMalfunction(t *testing.T) {
-	socketPath, transport := buildSocketPath(), noConnectTransport{}
+	CleanTestFolder()
+	socketPath, transport := BuildSocketPath(), noConnectTransport{}
 	// We should create the socket pipe here unless the connection won't open
-	listener, err := net.Listen("unix", socketPath)
-	if err != nil {
-		t.Fatalf("couldn't open socket pipe %s", socketPath)
+	listener, listenErr := net.Listen("unix", socketPath)
+	if listenErr != nil {
+		t.Fatalf("couldn't open socket pipe %s: %v", socketPath, listenErr)
 	}
 	defer listener.Close()
 	defer os.Remove(socketPath)
 	if _, err := qmp.Open(socketPath, &transport); err != nil {
-		if err.Domain() != SocketDomain {
-			t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), SocketDomain)
+		if err.Domain() != QmpConnectionDomain {
+			t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 		}
-		if err.Kind() != ConnectErrorType {
-			t.Errorf(`wrong error kind "%v". expected "%s"`, err.Kind(), SendErrorType)
+		if err.Kind() != ConnectErrorKind {
+			t.Errorf(`wrong error kind "%v". expected "%s"`, err.Kind(), SendErrorKind)
 		}
 	} else {
 		t.Errorf("there should have been an error here")
@@ -240,7 +245,7 @@ func TestConnectMalfunction(t *testing.T) {
 
 type notClosingTransport struct{}
 
-func (_ *notClosingTransport) Connect() error {
+func (_ *notClosingTransport) Connect() *TransportError {
 	return nil
 }
 
@@ -261,11 +266,11 @@ func (_ *notClosingTransport) Write(bytes []byte) error {
 }
 
 func TestClosingMalfunction(t *testing.T) {
-	socketPath, transport := buildSocketPath(), notClosingTransport{}
+	socketPath, transport := BuildSocketPath(), notClosingTransport{}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
-		t.Fatalf("couldn't open socket pipe %s", socketPath)
+		t.Fatalf("couldn't open socket pipe %s: %v", socketPath, listenErr)
 	}
 	defer listener.Close()
 	defer os.Remove(socketPath)
@@ -277,19 +282,20 @@ func TestClosingMalfunction(t *testing.T) {
 	if err = socket.Close(); err == nil {
 		t.Fatal("should have not been closed")
 	}
-	socketError := err.(*SocketError)
-	if socketError.Domain() != SocketDomain {
-		t.Errorf(`wrong error domain "%v". expected "%s"`, socketError.Domain(), SocketDomain)
+	qmpConnectionError := err.(*QmpConnectionError)
+	if qmpConnectionError.Domain() != QmpConnectionDomain {
+		t.Errorf(`wrong error domain "%v". expected "%s"`, qmpConnectionError.Domain(), QmpConnectionDomain)
 	}
-	if socketError.Kind() != CloseErrorType {
-		t.Errorf(`wrong error kind "%v". expected "%s"`, socketError.Kind(), CloseErrorType)
+	if qmpConnectionError.Kind() != CloseErrorKind {
+		t.Errorf(`wrong error kind "%v". expected "%s"`, qmpConnectionError.Kind(), CloseErrorKind)
 	}
+	CleanTestFolder()
 }
 
 type malfunctioningTransport struct{}
 
-func (transport *malfunctioningTransport) Connect() error {
-	return errors.New("malfunctioning transport")
+func (transport *malfunctioningTransport) Connect() *TransportError {
+	return NewTransportError(errors.New("malfunctioning transport"), Connect)
 }
 
 func (transport *malfunctioningTransport) Close() error {
@@ -309,7 +315,7 @@ func (transport *malfunctioningTransport) Write(_ []byte) error {
 }
 
 func TestOpenMalfunctioningSocket(t *testing.T) {
-	socketPath, transport := buildSocketPath(), malfunctioningTransport{}
+	socketPath, transport := BuildSocketPath(), malfunctioningTransport{}
 	if _, err := qmp.Open(socketPath, &transport); err == nil {
 		t.Error("socket should not open.")
 	}

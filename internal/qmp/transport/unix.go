@@ -2,8 +2,9 @@ package transport
 
 import (
 	"bufio"
-	"fmt"
 	"net"
+
+	. "github.com/prevostcorentin/go-qga/internal/errors"
 )
 
 type unixTransport struct {
@@ -12,10 +13,10 @@ type unixTransport struct {
 	pipe       *bufio.ReadWriter
 }
 
-func (transport *unixTransport) Connect() error {
+func (transport *unixTransport) Connect() *TransportError {
 	var err error
 	if transport.connection, err = net.Dial("unix", transport.path); err != nil {
-		return &UnixTransportError{WrappedError: err, errType: ConnectError}
+		return NewTransportError(err, Connect)
 	}
 	transport.pipe = bufio.NewReadWriter(
 		bufio.NewReader(transport.connection),
@@ -26,18 +27,21 @@ func (transport *unixTransport) Connect() error {
 
 func (transport *unixTransport) Write(bytes []byte) error {
 	if _, err := transport.pipe.Write(bytes); err != nil {
-		return &UnixTransportError{WrappedError: err, errType: WriteError}
+		return NewTransportError(err, Write)
 	}
-	return transport.pipe.Flush()
+	if err := transport.pipe.Writer.Flush(); err != nil {
+		return NewTransportError(err, Flush)
+	}
+	return nil
 }
 
 func (transport *unixTransport) Read() ([]byte, error) {
 	var err error
 	var bytes []byte
-	if bytes, err = transport.pipe.ReadBytes(0x0A); err == nil {
+	if bytes, err = transport.pipe.ReadBytes('\n'); err == nil {
 		return bytes, nil
 	}
-	return nil, &UnixTransportError{WrappedError: err, errType: ReadError}
+	return nil, NewTransportError(err, Read)
 }
 
 func (transport *unixTransport) Path() string {
@@ -45,29 +49,11 @@ func (transport *unixTransport) Path() string {
 }
 
 func (transport *unixTransport) Close() error {
-	if err := transport.pipe.Flush(); err != nil {
-		return &UnixTransportError{WrappedError: err, errType: FlushError}
+	if err := transport.pipe.Writer.Flush(); err != nil {
+		return NewTransportError(err, Flush)
 	}
 	if err := transport.connection.Close(); err != nil {
-		return &UnixTransportError{WrappedError: err, errType: CloseError}
+		return NewTransportError(err, Close)
 	}
 	return nil
-}
-
-type UnixTransportError struct {
-	WrappedError error
-	errType      TransportErrorType
-}
-
-func (err *UnixTransportError) Type() TransportErrorType {
-	return err.errType
-}
-
-func (err *UnixTransportError) Unwrap() error {
-	return err.WrappedError
-}
-
-func (err *UnixTransportError) Error() string {
-	message := fmt.Sprintf("%s error: %v\n", err.errType, err.WrappedError)
-	return message
 }

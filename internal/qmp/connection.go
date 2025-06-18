@@ -23,57 +23,57 @@ import (
 	"github.com/prevostcorentin/go-qga/internal/qmp/transport"
 )
 
-type Socket interface {
-	Connect(path string) *SocketError
-	Send(bytes []byte) ([]byte, *SocketError)
+type QmpConnection interface {
+	Connect(path string) *QmpConnectionError
+	Send(bytes []byte) ([]byte, *QmpConnectionError)
 	Close() error
 }
 
-type socket struct {
+type connection struct {
 	transport transport.Transport
 }
 
-func Open(path string, transport transport.Transport) (Socket, *SocketError) {
+func Open(path string, transport transport.Transport) (QmpConnection, *QmpConnectionError) {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		errorReason := fmt.Errorf(`socket "%s" does not exist`, path)
-		return nil, NewSocketError(errorReason, ConnectErrorType)
+		return nil, NewQmpConnectionError(errorReason, ConnectErrorKind)
 	}
 	if err := transport.Connect(); err != nil {
-		return nil, NewSocketError(err, ConnectErrorType)
+		return nil, NewQmpConnectionError(err, ConnectErrorKind)
 	}
-	socket := socket{transport: transport}
+	socket := connection{transport: transport}
 	if err := socket.Connect(path); err != nil {
-		return nil, NewSocketError(err, ConnectErrorType)
+		return nil, NewQmpConnectionError(err, ConnectErrorKind)
 	}
 	return &socket, nil
 }
 
-func (socket *socket) Connect(path string) *SocketError {
-	return socket.consumeBanner()
+func (connection *connection) Connect(path string) *QmpConnectionError {
+	return connection.consumeBanner()
 }
 
-func (socket *socket) consumeBanner() *SocketError {
+func (connection *connection) consumeBanner() *QmpConnectionError {
 	// TODO: Use the banner to gather agent capabilities (could result in client code generation ?)
-	if _, err := socket.transport.Read(); err != nil {
-		return NewSocketError(err, ReadErrorType)
+	if _, err := connection.transport.Read(); err != nil {
+		return NewQmpConnectionError(err, ReadErrorKind)
 	}
 	return nil
 }
 
-func (socket *socket) Send(bytes []byte) ([]byte, *SocketError) {
-	if err := socket.transport.Write(bytes); err != nil {
-		return nil, NewSocketError(err, SendErrorType)
+func (connection *connection) Send(bytes []byte) ([]byte, *QmpConnectionError) {
+	if err := connection.transport.Write(bytes); err != nil {
+		return nil, NewQmpConnectionError(err, SendErrorKind)
 	}
-	bytes, err := socket.transport.Read()
+	bytes, err := connection.transport.Read()
 	if err != nil {
-		return bytes, NewSocketError(err, SendErrorType)
+		return bytes, NewQmpConnectionError(err, SendErrorKind)
 	}
 	return bytes, nil
 }
 
-func (socket *socket) Close() error {
-	if err := socket.transport.Close(); err != nil {
-		return NewSocketError(err, CloseErrorType)
+func (connection *connection) Close() error {
+	if err := connection.transport.Close(); err != nil {
+		return NewQmpConnectionError(err, CloseErrorKind)
 	}
 	return nil
 }

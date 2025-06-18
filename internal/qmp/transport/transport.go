@@ -1,5 +1,9 @@
 package transport
 
+import (
+	. "github.com/prevostcorentin/go-qga/internal/errors"
+)
+
 type TransportType string
 
 const (
@@ -7,7 +11,7 @@ const (
 )
 
 type Transport interface {
-	Connect() error
+	Connect() *TransportError
 	Close() error
 	Path() string
 	Read() ([]byte, error)
@@ -21,20 +25,4 @@ func NewTransport(transportType TransportType, path string) Transport {
 		transport = &unixTransport{path: path}
 	}
 	return transport
-}
-
-type TransportErrorType string
-
-const (
-	UnknownError TransportErrorType = "Unknown"
-	ReadError                       = "Reading"
-	WriteError                      = "Writing"
-	ConnectError                    = "Connecting"
-	FlushError                      = "Flushing"
-	TimeoutError                    = "Timeout"
-	CloseError                      = "Closing"
-)
-
-type TransportError interface {
-	Type() TransportErrorType
 }
