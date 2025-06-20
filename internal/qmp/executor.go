@@ -17,17 +17,19 @@ package qmp
 import (
 	"encoding/json"
 	"fmt"
+
+	. "github.com/prevostcorentin/go-qga/internal/errors"
 )
 
 type commandExecutor struct {
-	socket *Socket
+	connection QmpConnection
 }
 
-func NewExecutor(socket *Socket) *commandExecutor {
-	return &commandExecutor{socket: socket}
+func NewExecutor(connection QmpConnection) *commandExecutor {
+	return &commandExecutor{connection: connection}
 }
 
-func (executor *commandExecutor) Run(command Command) (any, error) {
+func (executor *commandExecutor) Run(command Command) (any, QgaError) {
 	marshalled := struct {
 		Execute   string `json:"execute"`
 		Arguments any    `json:"arguments,omitempty"`
@@ -35,27 +37,29 @@ func (executor *commandExecutor) Run(command Command) (any, error) {
 		Execute:   command.Execute(),
 		Arguments: command.Arguments(),
 	}
-	marshalledBytes, err := json.Marshal(marshalled)
-	if err != nil {
-		return nil, err
+	marshalledBytes, marshalErr := json.Marshal(marshalled)
+	if marshalErr != nil {
+		return nil, NewCodecError(marshalErr, Marshal)
 	}
-	marshalledBytes = append(marshalledBytes, 0x0A) // Marshalling does not suffix objects with a line feed
-	responseBytes, err := executor.socket.send(marshalledBytes)
-	if err != nil {
-		return nil, err
+	marshalledBytes = append(marshalledBytes, '\n') // Marshalling does not suffix objects with a line feed
+	responseBytes, sendErr := executor.connection.Send(marshalledBytes)
+	if sendErr != nil {
+		return nil, sendErr
 	}
 	return executor.unmarshalCommandResponse(responseBytes, command)
 }
 
-func (executor *commandExecutor) unmarshalCommandResponse(bytes []byte, command Command) (any, error) {
+func (executor *commandExecutor) unmarshalCommandResponse(bytes []byte, command Command) (any, QgaError) {
 	typedResponse := command.Response()
 	var root map[string]json.RawMessage
 	if err := json.Unmarshal(bytes, &root); err != nil {
-		return nil, err
+		return nil, NewCodecError(err, Unmarshal)
 	}
 	if raw, ok := root["return"]; ok {
-		err := json.Unmarshal(raw, &typedResponse)
-		return typedResponse, err
+		if err := json.Unmarshal(raw, &typedResponse); err != nil {
+			return nil, NewCodecError(err, Unmarshal)
+		}
+		return typedResponse, nil
 	}
-	return typedResponse, fmt.Errorf(`missing "return" field in QGA response`)
+	return typedResponse, NewCodecError(fmt.Errorf(`missing "return" field in QGA response`), Key)
 }

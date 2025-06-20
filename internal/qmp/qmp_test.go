@@ -19,77 +19,74 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/prevostcorentin/go-qga/internal/qmp"
+	"github.com/prevostcorentin/go-qga/internal/qmp/transport"
+	. "github.com/prevostcorentin/go-qga/internal/testing"
 )
 
-type GuestHostNameArguments struct{}
-type GuestHostNameResponse struct {
+type QmpBannerResponse struct {
+	Qmp struct {
+		Version struct {
+			Qemu struct {
+				Major string `json:"major"`
+				Minor string `json:"minor"`
+				Micro string `json:"micro"`
+			} `json:"qemu"`
+			Package string `json:"package"`
+		} `json:"version"`
+		Capabilities []any `json:"capabilities"`
+	} `json:"QMP"`
+}
+
+type QmpHostnameResponse struct {
 	Return struct {
 		Name string `json:"name"`
 	} `json:"return"`
 }
 
-func TestHostnameCommand(t *testing.T) {
-	cleanTestFolder()
-	socketPath := buildSocketPath()
-	RunFakeQmpGuestAgent(t, socketPath)
-	qgaSocket := qmp.Socket{}
-	if err := qgaSocket.Connect(socketPath); err != nil {
-		t.Fatalf("while connecting to socket: %v", err)
-	}
-	defer qgaSocket.Close()
+type QmpCommand struct {
+	Execute string `json:"execute"`
+}
 
-	command := hostNameCommand{}
-	executor := qmp.NewExecutor(&qgaSocket)
-	response, err := executor.Run(command)
-	if err != nil {
-		t.Fatalf("while running command: %v", err)
-	}
-	typedResponse := response.(*hostNameResponse)
-	if typedResponse.Name != "fake-vm" {
-		t.Errorf(`vm name differs (got "%s", expecting "fake-vm")`, typedResponse.Name)
+type QmpError struct {
+	Error struct {
+		Class       string `json:"class"`
+		Description string `json:"desc"`
 	}
 }
 
-type hostNameCommand struct{}
-
-func (command hostNameCommand) Execute() string {
-	return "guest-get-host-name"
+type fakeGuestAgent struct {
+	listener net.Listener
+	done     chan struct{}
+	t        *testing.T
+	path     string
 }
 
-func (command hostNameCommand) Arguments() any {
-	return nil
+func newFakeGuestAgent(t *testing.T) *fakeGuestAgent {
+	return &fakeGuestAgent{t: t, done: make(chan struct{}), path: BuildSocketPath(t)}
 }
 
-func (command hostNameCommand) Response() any {
-	return &hostNameResponse{}
-}
-
-type hostNameResponse struct {
-	Name string
-}
-
-func RunFakeQmpGuestAgent(t *testing.T, socketPath string) {
-	listener, err := net.Listen("unix", socketPath)
-	if err != nil {
-		t.Fatalf("failed to listen unix socket: %v", err)
+func (agent *fakeGuestAgent) Start() {
+	var listenerError error
+	agent.listener, listenerError = net.Listen("unix", agent.Path())
+	if listenerError != nil {
+		agent.t.Fatalf("can't listen on %s: %v", agent.Path(), listenerError)
 	}
-
 	go func() {
-		defer listener.Close()
-		t.Log("accepting connection")
-		connection, err := listener.Accept()
-		if err != nil {
-			return // likely closed
+		for {
+			connection, acceptError := agent.listener.Accept()
+			if acceptError != nil {
+				select {
+				case <-agent.done:
+					return
+				default:
+					agent.t.Fatalf("can't accept connection: %v", acceptError)
+				}
+			}
+			go handleConnection(agent.t, connection)
 		}
-		t.Logf("connection accepted")
-		handleConnection(t, connection)
-		t.Logf("closing socket")
 	}()
 }
 
@@ -129,53 +126,55 @@ func handleConnection(t *testing.T, connection net.Conn) {
 	writer.Flush()
 }
 
-type QmpBannerResponse struct {
-	Qmp struct {
-		Version struct {
-			Qemu struct {
-				Major string `json:"major"`
-				Minor string `json:"minor"`
-				Micro string `json:"micro"`
-			} `json:"qemu"`
-			Package string `json:"package"`
-		} `json:"version"`
-		Capabilities []any `json:"capabilities"`
-	} `json:"QMP"`
+func (agent *fakeGuestAgent) Path() string {
+	return agent.path
 }
 
-type QmpHostnameResponse struct {
-	Return struct {
-		Name string `json:"name"`
-	} `json:"return"`
-}
-
-type QmpCommand struct {
-	Execute string `json:"execute"`
-}
-
-type QmpError struct {
-	Error struct {
-		Class       string `json:"class"`
-		Description string `json:"desc"`
+func (agent *fakeGuestAgent) Stop() {
+	close(agent.done)
+	if err := agent.listener.Close(); err != nil {
+		agent.t.Fatalf("can't close listener: %v", err)
 	}
 }
 
-func buildSocketPath() string {
-	testFolder := locateTestFolder()
-	return filepath.Join(testFolder, "go-qga-test-socket.sock")
+type hostNameCommand struct{}
+
+func (command hostNameCommand) Execute() string {
+	return "guest-get-host-name"
 }
 
-func locateTestFolder() string {
-	var temporaryFolder string
-	if runtime.GOOS == "windows" {
-		temporaryFolder = os.Getenv("TEMP")
-	} else {
-		temporaryFolder = "/tmp"
+func (command hostNameCommand) Arguments() any {
+	return nil
+}
+
+func (command hostNameCommand) Response() any {
+	return &hostNameResponse{}
+}
+
+type hostNameResponse struct {
+	Name string
+}
+
+func TestHostnameCommand(t *testing.T) {
+	agent := newFakeGuestAgent(t)
+	socketPath := agent.Path()
+	transport := transport.NewTransport(transport.Unix, socketPath)
+	agent.Start()
+	qgaSocket, openErr := qmp.Open(socketPath, transport)
+	if openErr != nil {
+		t.Fatalf("while opening socket: %v", openErr)
 	}
-	return temporaryFolder
-}
+	defer qgaSocket.Close()
 
-func cleanTestFolder() {
-	socketPath := buildSocketPath()
-	os.Remove(socketPath)
+	command := hostNameCommand{}
+	executor := qmp.NewExecutor(qgaSocket)
+	response, err := executor.Run(command)
+	if err != nil {
+		t.Fatalf("while running command: %v", err)
+	}
+	agent.Stop()
+	typedResponse := response.(*hostNameResponse)
+	if typedResponse.Name != "fake-vm" {
+		t.Errorf(`vm name differs (got "%s", expecting "fake-vm")`, typedResponse.Name)
+	}
 }
