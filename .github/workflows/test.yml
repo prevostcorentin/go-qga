@@ -20,7 +20,7 @@ jobs:
     - name: Run tests
       run: |
         go test -v -coverprofile=coverage.out ./...
-        grep -Ev '_test\.go|internal/errors' coverage.out > coverage.filtered.out
+        grep -Ev '_test\.go|internal/errors|internal/testing' coverage.out > coverage.filtered.out
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
