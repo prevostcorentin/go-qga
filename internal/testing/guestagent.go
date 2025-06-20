@@ -1,9 +1,8 @@
 package testing
 
 import (
-	"os"
 	"path/filepath"
-	"runtime"
+	"testing"
 )
 
 type Agent interface {
@@ -12,22 +11,7 @@ type Agent interface {
 	Stop()
 }
 
-func CleanTestFolder() {
-	socketPath := BuildSocketPath()
-	os.Remove(socketPath)
-}
-
-func BuildSocketPath() string {
-	testFolder := locateTestFolder()
+func BuildSocketPath(t *testing.T) string {
+	testFolder := t.TempDir()
 	return filepath.Join(testFolder, "go-qga-test-socket.sock")
-}
-
-func locateTestFolder() string {
-	var temporaryFolder string
-	if runtime.GOOS == "windows" {
-		temporaryFolder = os.Getenv("TEMP")
-	} else {
-		temporaryFolder = "/tmp"
-	}
-	return temporaryFolder
 }

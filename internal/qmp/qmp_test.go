@@ -126,7 +126,6 @@ type hostNameResponse struct {
 }
 
 /*func TestHostnameCommand(t *testing.T) {
-	cleanTestFolder()
 	socketPath := buildSocketPath()
 	RunFakeQmpGuestAgent(t, socketPath)
 	transport := transport.NewTransport(transport.Unix, socketPath)

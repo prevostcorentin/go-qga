@@ -76,8 +76,7 @@ func (_ *noWriteTransport) Write(bytes []byte) error {
 }
 
 func TestSendWriteMalfunction(t *testing.T) {
-	CleanTestFolder()
-	socketPath, transport := BuildSocketPath(), noWriteTransport{}
+	socketPath, transport := BuildSocketPath(t), noWriteTransport{}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
@@ -124,8 +123,7 @@ func (_ *noBannerTransport) Write(bytes []byte) error {
 }
 
 func TestMalfunctioningConnect(t *testing.T) {
-	CleanTestFolder()
-	socketPath, transport := BuildSocketPath(), noBannerTransport{}
+	socketPath, transport := BuildSocketPath(t), noBannerTransport{}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
@@ -174,8 +172,7 @@ func (_ *noReadTransport) Write(bytes []byte) error {
 }
 
 func TestSendReadMalfunction(t *testing.T) {
-	CleanTestFolder()
-	socketPath, transport := BuildSocketPath(), noReadTransport{bannerRead: false}
+	socketPath, transport := BuildSocketPath(t), noReadTransport{bannerRead: false}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
@@ -222,8 +219,7 @@ func (_ *noConnectTransport) Write(bytes []byte) error {
 }
 
 func TestConnectMalfunction(t *testing.T) {
-	CleanTestFolder()
-	socketPath, transport := BuildSocketPath(), noConnectTransport{}
+	socketPath, transport := BuildSocketPath(t), noConnectTransport{}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
@@ -266,7 +262,7 @@ func (_ *notClosingTransport) Write(bytes []byte) error {
 }
 
 func TestClosingMalfunction(t *testing.T) {
-	socketPath, transport := BuildSocketPath(), notClosingTransport{}
+	socketPath, transport := BuildSocketPath(t), notClosingTransport{}
 	// We should create the socket pipe here unless the connection won't open
 	listener, listenErr := net.Listen("unix", socketPath)
 	if listenErr != nil {
@@ -289,7 +285,6 @@ func TestClosingMalfunction(t *testing.T) {
 	if qmpConnectionError.Kind() != CloseErrorKind {
 		t.Errorf(`wrong error kind "%v". expected "%s"`, qmpConnectionError.Kind(), CloseErrorKind)
 	}
-	CleanTestFolder()
 }
 
 type malfunctioningTransport struct{}
@@ -315,7 +310,7 @@ func (transport *malfunctioningTransport) Write(_ []byte) error {
 }
 
 func TestOpenMalfunctioningSocket(t *testing.T) {
-	socketPath, transport := BuildSocketPath(), malfunctioningTransport{}
+	socketPath, transport := BuildSocketPath(t), malfunctioningTransport{}
 	if _, err := qmp.Open(socketPath, &transport); err == nil {
 		t.Error("socket should not open.")
 	}

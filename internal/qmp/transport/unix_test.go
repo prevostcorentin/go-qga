@@ -3,7 +3,6 @@ package transport_test
 import (
 	"bufio"
 	"net"
-	"os"
 	"testing"
 
 	. "github.com/prevostcorentin/go-qga/internal/errors"
@@ -33,14 +32,15 @@ type echoAgent struct {
 	listener net.Listener
 	done     chan struct{}
 	t        *testing.T
+	path     string
 }
 
 func newEchoAgent(t *testing.T) *echoAgent {
-	return &echoAgent{t: t, done: make(chan struct{})}
+	return &echoAgent{t: t, done: make(chan struct{}), path: BuildSocketPath(t)}
 }
 
-func (_ *echoAgent) Path() string {
-	return BuildSocketPath()
+func (agent *echoAgent) Path() string {
+	return agent.path
 }
 
 func (agent *echoAgent) Start() {
@@ -83,11 +83,9 @@ func (agent *echoAgent) Stop() {
 	if err := agent.listener.Close(); err != nil {
 		agent.t.Fatalf("can't close listener: %v", err)
 	}
-	os.Remove(agent.Path())
 }
 
 func TestReadWrite(t *testing.T) {
-	CleanTestFolder()
 	agent := newEchoAgent(t)
 	agent.Start()
 	unixTransport := transport.NewTransport("unix", agent.Path())
@@ -112,14 +110,15 @@ type closeConnectionAgent struct {
 	listener net.Listener
 	t        *testing.T
 	done     chan struct{}
+	path     string
 }
 
 func newCloseConnectionAgent(t *testing.T) *closeConnectionAgent {
-	return &closeConnectionAgent{t: t, done: make(chan struct{})}
+	return &closeConnectionAgent{t: t, done: make(chan struct{}), path: BuildSocketPath(t)}
 }
 
-func (_ *closeConnectionAgent) Path() string {
-	return BuildSocketPath()
+func (agent *closeConnectionAgent) Path() string {
+	return agent.path
 }
 
 func (agent *closeConnectionAgent) Start() {
@@ -150,11 +149,9 @@ func (agent *closeConnectionAgent) Stop() {
 	if err := agent.listener.Close(); err != nil {
 		agent.t.Fatalf("can't close listener: %v", err)
 	}
-	os.Remove(agent.Path())
 }
 
 func TestNoWrite(t *testing.T) {
-	CleanTestFolder()
 	agent := newCloseConnectionAgent(t)
 	agent.Start()
 	transport := transport.NewTransport("unix", agent.Path())
@@ -176,7 +173,6 @@ func TestNoWrite(t *testing.T) {
 }
 
 func TestNoRead(t *testing.T) {
-	CleanTestFolder()
 	agent := newCloseConnectionAgent(t)
 	agent.Start()
 	transport := transport.NewTransport("unix", agent.Path())
