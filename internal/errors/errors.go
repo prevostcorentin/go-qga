@@ -26,10 +26,11 @@ type QgaError interface {
 type DomainType string
 
 const (
-	TransportDomain     DomainType = "Transport"
-	QmpConnectionDomain            = "Connection"
-	ProtocolDomain                 = "Protocol"
-	CodecDomain                    = "Codec"
+	TransportDomain      DomainType = "Transport"
+	QmpConnectionDomain             = "Connection"
+	ProtocolDomain                  = "Protocol"
+	CodecDomain                     = "Codec"
+	CodeGenerationDomain            = "Codegen"
 )
 
 func formatErrorMessage(err QgaError) string {
