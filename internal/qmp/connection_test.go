@@ -95,7 +95,7 @@ func TestSendWriteMalfunction(t *testing.T) {
 	if err.Domain() != QmpConnectionDomain {
 		t.Errorf(`wrong error domain "%s". should have been "Socket"`, err.Domain())
 	}
-	if err.Kind() != SendErrorKind {
+	if err.Kind() != string(SendErrorKind) {
 		t.Errorf(`wrong error kind "%s". should have been "Send"`, err.Kind())
 	}
 }
@@ -138,7 +138,7 @@ func TestMalfunctioningConnect(t *testing.T) {
 	if err.Domain() != QmpConnectionDomain {
 		t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 	}
-	if err.Kind() != ConnectErrorKind {
+	if err.Kind() != string(ConnectErrorKind) {
 		t.Errorf(`wrong error kind "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 	}
 }
@@ -191,7 +191,7 @@ func TestSendReadMalfunction(t *testing.T) {
 	if err.Domain() != QmpConnectionDomain {
 		t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 	}
-	if err.Kind() != SendErrorKind {
+	if err.Kind() != string(SendErrorKind) {
 		t.Errorf(`wrong error type "%v". expected "%s"`, err.Domain(), SendErrorKind)
 	}
 }
@@ -231,7 +231,7 @@ func TestConnectMalfunction(t *testing.T) {
 		if err.Domain() != QmpConnectionDomain {
 			t.Errorf(`wrong error domain "%v". expected "%s"`, err.Domain(), QmpConnectionDomain)
 		}
-		if err.Kind() != ConnectErrorKind {
+		if err.Kind() != string(ConnectErrorKind) {
 			t.Errorf(`wrong error kind "%v". expected "%s"`, err.Kind(), SendErrorKind)
 		}
 	} else {
@@ -282,7 +282,7 @@ func TestClosingMalfunction(t *testing.T) {
 	if qmpConnectionError.Domain() != QmpConnectionDomain {
 		t.Errorf(`wrong error domain "%v". expected "%s"`, qmpConnectionError.Domain(), QmpConnectionDomain)
 	}
-	if qmpConnectionError.Kind() != CloseErrorKind {
+	if qmpConnectionError.Kind() != string(CloseErrorKind) {
 		t.Errorf(`wrong error kind "%v". expected "%s"`, qmpConnectionError.Kind(), CloseErrorKind)
 	}
 }

@@ -19,8 +19,8 @@ type QmpConnectionError struct {
 	kind         QmpConnectionErrorKind
 }
 
-func NewQmpConnectionError(wrappedError error, errorType QmpConnectionErrorKind) *QmpConnectionError {
-	return &QmpConnectionError{wrappedError: wrappedError, kind: errorType}
+func NewQmpConnectionError(wrappedError error, errorKind QmpConnectionErrorKind) *QmpConnectionError {
+	return &QmpConnectionError{wrappedError: wrappedError, kind: errorKind}
 }
 
 func (err *QmpConnectionError) Domain() DomainType {
@@ -35,16 +35,16 @@ func (err *QmpConnectionError) Unwrap() error {
 	return err.wrappedError
 }
 
-func (connectionError *QmpConnectionError) Error() string {
-	return formatErrorMessage(connectionError)
+func (err *QmpConnectionError) Error() string {
+	return formatErrorMessage(err)
 }
 
 type QmpConnectionErrorKind string
 
 const (
 	UnknownErrorKind QmpConnectionErrorKind = "Unknown"
-	ConnectErrorKind                        = "Connect"
-	SendErrorKind                           = "Send"
-	ReadErrorKind                           = "Read"
-	CloseErrorKind                          = "Close"
+	ConnectErrorKind QmpConnectionErrorKind = "Connect"
+	SendErrorKind    QmpConnectionErrorKind = "Send"
+	ReadErrorKind    QmpConnectionErrorKind = "Read"
+	CloseErrorKind   QmpConnectionErrorKind = "Close"
 )
