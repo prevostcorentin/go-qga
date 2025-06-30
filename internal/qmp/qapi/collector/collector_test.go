@@ -8,8 +8,8 @@ import (
 
 func TestReadQapiJson(t *testing.T) {
 	qapi_schema := `[
-{ "command": "test-command", "data":{ "id": "int" }, "returns": "int" },
-{ "struct": "TestStruct", "data": { "value": "int" } },
+{ "command": "test-command", "data":{ "id": "int", "enum": "TestEnum" }, "returns": "TestStruct" },
+{ "struct": "TestStruct", "data": { "argument": "str" } },
 { "enum": "TestEnum", "data": [ "value1", "value2" ] }
 ]`
 
@@ -29,7 +29,13 @@ func TestReadQapiJson(t *testing.T) {
 		t.Errorf(`wrong field name "id" not found.`)
 	}
 	if command.Fields()["id"] != "int" {
-		t.Errorf(`wrong field type "%v" for "%v". expected "int"`, command.Fields()["value"], command.Fields()["value"])
+		t.Errorf(`wrong field type "%v" for "id". expected "int"`, command.Fields()["id"])
+	}
+	if command.Fields()["enum"] != "TestEnum" {
+		t.Errorf(`wrong field type "%v" for "enum". expected "TestStruct"`, command.Fields()["enum"])
+	}
+	if command.(*Command).Returns() != "TestStruct" {
+		t.Errorf(`wrong retunrs type "%v". expected "TestStruct"`, command.(*Command).Returns())
 	}
 	st := entities[1]
 	if st.Name() != "TestStruct" {
@@ -38,10 +44,10 @@ func TestReadQapiJson(t *testing.T) {
 	if st.Type() != StructType {
 		t.Errorf(`wrong entity type "%v". expected "%s"`, st.Type(), StructType)
 	}
-	if _, valuePresent := st.Fields()["value"]; !valuePresent {
-		t.Errorf(`"value" key is missing from struct`)
+	if _, valuePresent := st.Fields()["argument"]; !valuePresent {
+		t.Errorf(`"argument" key is missing from struct`)
 	}
-	if st.Fields()["value"] == IntFieldType {
+	if st.Fields()["argument"] != StringFieldType {
 		t.Errorf(`wrong field type "%v". expected "%s"`, st.Fields()["value"], IntFieldType)
 	}
 	en := entities[2]

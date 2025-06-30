@@ -17,3 +17,7 @@ func (command *Command) Fields() map[string]any {
 func (_ *Command) Type() string {
 	return string(CommandType)
 }
+
+func (command *Command) Returns() string {
+	return command.CommandReturns
+}
