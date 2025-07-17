@@ -18,50 +18,50 @@ func TestReadQapiJson(t *testing.T) {
 		t.Fatalf("while collecting entities: %v", collectError)
 	}
 
-	command := entities[0]
-	if command.Name() != "test-command" {
+	if entities[0].Name() != "test-command" {
 		t.Errorf(`entity "test-command" is missing`)
 	}
-	if command.Type() != string(CommandType) {
-		t.Errorf(`wrong entity type "%v". expected "%s"`, command.Type(), CommandType)
+	var ok bool
+	var command *Command
+	if command, ok = entities[0].(*Command); !ok {
+		t.Errorf(`wrong entity type. expected "*Command"`)
 	}
-	if _, ok := command.Fields()["id"]; !ok {
+	if _, ok := command.Arguments["id"]; !ok {
 		t.Errorf(`wrong field name "id" not found.`)
 	}
-	if command.Fields()["id"] != "int" {
-		t.Errorf(`wrong field type "%v" for "id". expected "int"`, command.Fields()["id"])
+	if command.Arguments["id"] != "int" {
+		t.Errorf(`wrong field type "%v" for "id". expected "int"`, command.Arguments["id"])
 	}
-	if command.Fields()["enum"] != "TestEnum" {
-		t.Errorf(`wrong field type "%v" for "enum". expected "TestStruct"`, command.Fields()["enum"])
+	if command.Arguments["enum"] != "TestEnum" {
+		t.Errorf(`wrong field type "%v" for "enum". expected "TestStruct"`, command.Arguments["enum"])
 	}
-	if command.(*Command).Returns() != "TestStruct" {
-		t.Errorf(`wrong retunrs type "%v". expected "TestStruct"`, command.(*Command).Returns())
+	if command.Returns != "TestStruct" {
+		t.Errorf(`wrong retunrs type "%v". expected "TestStruct"`, command.Returns)
 	}
-	st := entities[1]
-	if st.Name() != "TestStruct" {
-		t.Errorf(`wrong entity name "%v". expected "TestStruct"`, st.Name())
+	if entities[1].Name() != "TestStruct" {
+		t.Errorf(`wrong entity name "%v". expected "TestStruct"`, entities[1].Name())
 	}
-	if st.Type() != StructType {
-		t.Errorf(`wrong entity type "%v". expected "%s"`, st.Type(), StructType)
+	var st *Struct
+	if st, ok = entities[1].(*Struct); !ok {
+		t.Errorf(`wrong entity type. expected "*Struct"`)
 	}
-	if _, valuePresent := st.Fields()["argument"]; !valuePresent {
+	if _, valuePresent := st.Data["argument"]; !valuePresent {
 		t.Errorf(`"argument" key is missing from struct`)
 	}
-	if st.Fields()["argument"] != StringFieldType {
-		t.Errorf(`wrong field type "%v". expected "%s"`, st.Fields()["value"], IntFieldType)
+	if st.Data["argument"] != "str" {
+		t.Errorf(`wrong field type "%v". expected "string"`, st.Data["argument"])
 	}
-	en := entities[2]
-	if en.Name() != "TestEnum" {
-		t.Errorf(`wrong entity name "%v". expected "TestEnum"`, en.Name())
+	if entities[2].Name() != "TestEnum" {
+		t.Errorf(`wrong entity name "%v". expected "TestEnum"`, entities[2].Name())
 	}
-	if en.Type() != EnumType {
-		t.Errorf(`wrong entity type "%v". expected "%s"`, en.Type(), EnumType)
+	var en *Enum
+	if en, ok = entities[2].(*Enum); !ok {
+		t.Errorf(`wrong entity type. expected "*Enum"`)
 	}
-	enumData := en.(*Enum).Data()
-	if enumData[0] != "value1" {
-		t.Errorf(`wrong field value "%v". expected "value1"`, enumData[0])
+	if en.Data[0] != "value1" {
+		t.Errorf(`wrong field value "%v". expected "value1"`, en.Data[0])
 	}
-	if enumData[1] != "value2" {
-		t.Errorf(`wrong field value "%v". expected "value2"`, enumData[1])
+	if en.Data[1] != "value2" {
+		t.Errorf(`wrong field value "%v". expected "value2"`, en.Data[1])
 	}
 }

@@ -14,34 +14,34 @@
 
 package errors
 
-type CollectErrorKind string
-
-type CollectError struct {
+type ConvertError struct {
 	wrappedError error
-	kind         CollectErrorKind
+	kind         ConvertErrorKind
 }
 
-func NewCollectError(wrappedError error, errorKind CollectErrorKind) *CollectError {
-	return &CollectError{wrappedError: wrappedError, kind: errorKind}
+func NewConvertError(wrappedError error, kind ConvertErrorKind) *ConvertError {
+	return &ConvertError{wrappedError: wrappedError, kind: kind}
 }
 
-func (err *CollectError) Domain() DomainType {
+func (_ *ConvertError) Domain() DomainType {
 	return CodeGenerationDomain
 }
 
-func (err *CollectError) Kind() string {
-	return string(err.kind)
+func (convertError *ConvertError) Kind() string {
+	return string(convertError.kind)
 }
 
-func (err *CollectError) Unwrap() error {
-	return err.wrappedError
+func (convertError *ConvertError) Unwrap() error {
+	return convertError.wrappedError
 }
 
-func (err *CollectError) Error() string {
-	return formatErrorMessage(err)
+func (convertError *ConvertError) Error() string {
+	return formatErrorMessage(convertError)
 }
+
+type ConvertErrorKind string
 
 const (
-	MalformedSchema CollectErrorKind = "Malformed schema"
-	Unknown                          = "Unknown type"
+	UnknownPrimitiveType ConvertErrorKind = "Unknown primitive type"
+	UnknownEntityType                     = "Unknown entity type"
 )

@@ -5,9 +5,10 @@ import (
 	"fmt"
 
 	. "github.com/prevostcorentin/go-qga/internal/errors"
+	"github.com/prevostcorentin/go-qga/internal/qmp/qapi"
 )
 
-func Collect(bytes []byte) ([]Entity, *CollectError) {
+func Collect(bytes []byte) ([]qapi.Entity, *CollectError) {
 	var root []json.RawMessage
 	if unmarshalError := json.Unmarshal(bytes, &root); unmarshalError != nil {
 		return nil, NewCollectError(unmarshalError, MalformedSchema)
@@ -15,8 +16,8 @@ func Collect(bytes []byte) ([]Entity, *CollectError) {
 	return processEntities(root)
 }
 
-func processEntities(root []json.RawMessage) ([]Entity, *CollectError) {
-	entities := make([]Entity, len(root))
+func processEntities(root []json.RawMessage) ([]qapi.Entity, *CollectError) {
+	entities := make([]qapi.Entity, len(root))
 	for i, rawItem := range root {
 		var item map[string]json.RawMessage
 		if unmarshalError := json.Unmarshal(rawItem, &item); unmarshalError != nil {
@@ -34,8 +35,8 @@ func processEntities(root []json.RawMessage) ([]Entity, *CollectError) {
 	return entities, nil
 }
 
-func detectEntityType(item map[string]json.RawMessage) (Entity, error) {
-	var entity Entity
+func detectEntityType(item map[string]json.RawMessage) (qapi.Entity, error) {
+	var entity qapi.Entity
 	switch {
 	case item["command"] != nil:
 		entity = &Command{}

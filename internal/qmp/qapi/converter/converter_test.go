@@ -3,56 +3,56 @@ package converter_test
 import (
 	"testing"
 
-	. "github.com/prevostcorentin/go-qga/internal/errors"
+	"github.com/prevostcorentin/go-qga/internal/qmp/qapi"
 	"github.com/prevostcorentin/go-qga/internal/qmp/qapi/collector"
 	. "github.com/prevostcorentin/go-qga/internal/qmp/qapi/converter"
 )
 
 func TestConvertEntities(t *testing.T) {
-	collectedEntities := []collector.Entity{
+	collectedEntities := []qapi.Entity{
 		&collector.Command{
-			CommandName:    "test-command",
-			CommandData:    map[string]any{"argument": "str", "enum": "TestEnum"},
-			CommandReturns: "TestStruct",
+			CommandName: "test-command",
+			Arguments:   map[string]string{"argument": "str", "enum": "TestEnum"},
+			Returns:     "TestStruct",
 		},
 		&collector.Enum{
 			EnumName: "TestEnum",
-			EnumData: []string{"value1", "value2"},
+			Data:     []string{"value1", "value2"},
 		},
 		&collector.Struct{
 			StructName: "TestStruct",
-			StructData: map[string]any{"argument": "TestEnum"},
+			Data:       map[string]any{"argument": "TestEnum"},
 		},
 	}
 	convertedEntities, conversionError := Convert(collectedEntities)
 	if conversionError != nil {
 		t.Fatalf("while converting entities: %v", conversionError)
 	}
-	command := convertedEntities[0]
-	commandFields := command.Fields()
-	if commandFields[0].Name() != "argument" {
-		t.Errorf(`wrong name "%v" for argument 0. expected "argument"`, commandFields[0].Name())
+	if convertedEntities[0].Name() != "test-command" {
+		t.Errorf(`wrong name "%v" for argument 0. expected "test-command"`, convertedEntities[0].Name())
 	}
-	if _, isPrimitive := commandFields[0].(*Primitive); !isPrimitive {
-		t.Errorf("wrong data type for argument 0. expected a primitive type.")
+	var ok bool
+	var command *Command
+	if command, ok = convertedEntities[0].(*Command); !ok {
+		t.Errorf(`wrong data type. expected "*Command"`)
 	}
-	primitive := commandFields[0].(*Primitive)
-	if primitive.TypeName() != string(StringPrimitiveType) {
-		t.Errorf(`wrong primitive type "%v" for argument 0. expected "%s"`, string(StringPrimitiveType))
+	commandArguments := command.Arguments()
+	if commandArguments[0].Name() != "argument" {
+		t.Errorf(`wrong argument name "%v". Expected "argument"`, commandArguments[0].Name())
 	}
-	if _, isEntity := commandFields[1].(*EntityField); !isEntity {
-		t.Errorf("wrong data type for argument 1. expected an entity type")
+	if commandArguments[0].Type() != StringFieldType {
+		t.Errorf("wrong data type for argument 0. expected an string type")
 	}
-	entity := commandFields[1].(*EntityField)
-	if entity.Name() != "TestEnum" {
-		t.Errorf(`wrong entity type name "%v" for argument 1. expected "TestEnum"`, entity.Type())
+	if commandArguments[1].Name() != "TestEnum" {
+		t.Errorf(`wrong entity type name "%v" for argument 1. expected "TestEnum"`, commandArguments[1].Name())
 	}
-	commandReturns := command.(*Command).Returns()
-	if commandReturns.Type() != EntityFieldType {
+	if commandArguments[1].Type() != CompositeFieldType {
+		t.Errorf("wrong data type for argument 1. expected a compositie type")
+	}
+	if command.Returns().Name() != "TestStruct" {
+		t.Errorf(`wrong entity name "%v" for command returns. expected "TestStruct"`, command.Returns().Name())
+	}
+	if command.Returns().Type() != CompositeFieldType {
 		t.Errorf("wrong type for command returns. expected an entity")
-	}
-	entity = commandReturns.(*EntityField)
-	if entity.Name() != "TestStruct" {
-		t.Errorf(`wrong entity name "%v" for command returns. expected "TestStruct"`)
 	}
 }
