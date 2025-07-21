@@ -40,19 +40,16 @@ func TestConvertEntities(t *testing.T) {
 	if commandArguments[0].Name() != "argument" {
 		t.Errorf(`wrong argument name "%v". Expected "argument"`, commandArguments[0].Name())
 	}
-	if commandArguments[0].Type() != StringFieldType {
+	if commandArguments[0].Type() != "str" {
 		t.Errorf("wrong data type for argument 0. expected an string type")
 	}
-	if commandArguments[1].Name() != "TestEnum" {
+	if commandArguments[1].Name() != "enum" {
 		t.Errorf(`wrong entity type name "%v" for argument 1. expected "TestEnum"`, commandArguments[1].Name())
 	}
-	if commandArguments[1].Type() != CompositeFieldType {
-		t.Errorf("wrong data type for argument 1. expected a compositie type")
+	if commandArguments[1].Type() != "TestEnum" {
+		t.Errorf(`wrong data type "%v" for argument 1. expected a composite type`, commandArguments[1].Type())
 	}
-	if command.Returns().Name() != "TestStruct" {
-		t.Errorf(`wrong entity name "%v" for command returns. expected "TestStruct"`, command.Returns().Name())
-	}
-	if command.Returns().Type() != CompositeFieldType {
-		t.Errorf("wrong type for command returns. expected an entity")
+	if command.ReturnsType() != "TestStruct" {
+		t.Errorf(`wrong return type "%v" for command returns. expected "TestStruct"`, command.ReturnsType())
 	}
 }

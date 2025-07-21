@@ -16,12 +16,3 @@ func (field *Field) Name() string {
 func (field *Field) Type() string {
 	return field.typeName
 }
-
-type FieldType string
-
-const (
-	IntegerFieldType   FieldType = "int"
-	StringFieldType              = "str"
-	BoolFieldType                = "bool"
-	CompositeFieldType           = "to_resolve"
-)
