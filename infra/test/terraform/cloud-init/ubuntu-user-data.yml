@@ -1,0 +1,50 @@
+#cloud-config
+hostname: ubuntu-test
+users:
+  - name: testuser
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+packages:
+  - qemu-guest-agent
+  - golang-go
+  - git
+  - curl
+  - wget
+
+runcmd:
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+
+  - |
+    cd /home/testuser
+    # Remplacez par votre repo
+    # git clone https://github.com/votre-org/votre-projet-go.git
+    mkdir -p go-qemu-project
+    chown testuser:testuser go-qemu-project
+
+  - |
+    echo 'export GOPATH=/home/testuser/go' >> /home/testuser/.bashrc
+    echo 'export PATH=$PATH:/usr/local/go/bin:$GOPATH/bin' >> /home/testuser/.bashrc
+
+write_files:
+  - path: /etc/systemd/system/test-runner.service
+    content: |
+      [Unit]
+      Description=Test Runner Service
+      After=qemu-guest-agent.service
+
+      [Service]
+      Type=oneshot
+      User=testuser
+      WorkingDirectory=/home/testuser/go-qemu-project
+      ExecStart=/usr/bin/go test -v ./...
+
+      [Install]
+      WantedBy=multi-user.target
+
+power_state:
+  mode: reboot
+  condition: True

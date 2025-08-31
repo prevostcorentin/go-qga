@@ -1,0 +1,21 @@
+#cloud-config
+hostname: centos-test
+users:
+  - name: testuser
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_public_key}
+
+packages:
+  - qemu-guest-agent
+  - golang
+  - git
+
+runcmd:
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+  - |
+    cd /home/testuser
+    mkdir -p go-qemu-project
+    chown testuser:testuser go-qemu-project
