@@ -2,29 +2,64 @@ name: test
 
 on:
   push:
-    branches: [ main, ci ]
+    branches: [main, ci]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  test:
+  test-code:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24.4'
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.4"
 
-    - name: Run tests
-      run: |
-        go test -v -coverprofile=coverage.out ./...
-        grep -Ev '_test\.go|internal/errors|internal/testing' coverage.out > coverage.filtered.out
+      - name: Run tests
+        run: |
+          go test -v -coverprofile=coverage.out ./...
+          grep -Ev '_test\.go|internal/errors|internal/testing' coverage.out > coverage.filtered.out
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: coverage.filtered.out
-        fail_ci_if_error: true
-        token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: coverage.filtered.out
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  test-qemu:
+    needs: test-code
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Buildah & Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y buildah podman
+
+      - name: Build Test image
+        run: |
+          chmod +x infra/test/build-test-image.sh
+          ./infra/test/build-test-image.sh
+
+      - name: Run QEMU Guest Agent container
+        run: |
+          AGENT_CONTAINER=$(podman run -d -v /tmp/qga.sock:/var/run/qemu-ga/qga.sock qga-test-env)
+          echo "AGENT_CONTAINER=$AGENT_CONTAINER" >> $GITHUB_ENV
+
+      - name: Run Go tests
+        run: |
+          podman run --rm -it \
+            -v /tmp/qga.sock:/var/run/qemu-ga/qga.sock \
+            -v "$GITHUB_WORKSPACE":/go/src/project \
+            -w /go/src/project \
+            golang:1.24.5-bullseye \
+            go test ./...
+
+      - name: Stop QEMU Guest Agent container
+        if: always()
+        run: |
+          podman stop $AGENT_CONTAINER
